@@ -1,5 +1,6 @@
 from django.db import models
 from django.urls import reverse
+from events.models import Conference
 
 
 class Status(models.Model):
@@ -42,7 +43,7 @@ class Presentation(models.Model):
     )
 
     conference = models.ForeignKey(
-        "events.Conference",
+        Conference,
         related_name="presentations",
         on_delete=models.CASCADE,
     )
@@ -55,3 +56,22 @@ class Presentation(models.Model):
 
     class Meta:
         ordering = ("title",)  # Default ordering for presentation
+
+    def approve(self):
+        """
+        retrieve the string from the Status class by passing name = approved in the parameter
+        set it equal to a variable called status (can be any name)
+        set the instance's status attribute (self.status) to that new variable
+        save the variable
+        """
+        status = Status.objects.get(name="APPROVED")
+        self.status = status
+        self.save()
+
+    def reject(self):
+        """
+        same as approve method, but look for rejected
+        """
+        status = Status.objects.get(name="REJECTED")
+        self.status = status
+        self.save()

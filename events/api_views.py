@@ -1,10 +1,57 @@
 from django.http import JsonResponse
 
-from .models import Conference, Location
+from .models import Conference, Location, State
+from common.json import ModelEncoder
+from django.views.decorators.http import require_http_methods
+import json
+
+
+class LocationListEncoder(ModelEncoder):
+    model = Location
+    properties = ["name"]
+
+
+class LocationDetailEncoder(ModelEncoder):
+    model = Location
+    properties = [
+        "name",
+        "city",
+        "room_count",
+        "created",
+        "updated",
+    ]
+
+    def get_extra_data(self, o):
+        return {"state": o.state.abbreviation}
+
+
+class ConferenceDetailEncoder(ModelEncoder):
+    model = Conference
+    properties = [
+        "name",
+        "description",
+        "max_presentations",
+        "max_attendees",
+        "starts",
+        "ends",
+        "created",
+        "updated",
+        "location",
+    ]
+    encoders = {
+        "location": LocationListEncoder(),
+    }
+
+
+class ConferenceListEncoder(ModelEncoder):
+    model = Conference
+    properties = [
+        "name",
+    ]
 
 
 def api_list_conferences(request):
-    """
+    """Description
     Lists the conference names and the link to the conference.
 
     Returns a dictionary with a single key "conferences" which
@@ -22,20 +69,14 @@ def api_list_conferences(request):
         ]
     }
     """
-    response = []
     conferences = Conference.objects.all()
-    for conference in conferences:
-        response.append(
-            {
-                "name": conference.name,
-                "href": conference.get_api_url(),
-            }
-        )
-    return JsonResponse({"conferences": response})
+    return JsonResponse(
+        {"conferences": conferences}, encoder=ConferenceListEncoder
+    )
 
 
 def api_show_conference(request, id):
-    """
+    """Description
     Returns the details for the Conference model specified
     by the id parameter.
 
@@ -61,25 +102,13 @@ def api_show_conference(request, id):
     """
     conference = Conference.objects.get(id=id)
     return JsonResponse(
-        {
-            "name": conference.name,
-            "starts": conference.starts,
-            "ends": conference.ends,
-            "description": conference.description,
-            "created": conference.created,
-            "updated": conference.updated,
-            "max_presentations": conference.max_presentations,
-            "max_attendees": conference.max_attendees,
-            "location": {
-                "name": conference.location.name,
-                "href": conference.location.get_api_url(),
-            },
-        }
+        conference, encoder=ConferenceDetailEncoder, safe=False
     )
 
 
+@require_http_methods(["GET", "POST"])
 def api_list_locations(request):
-    """
+    """Description
     Lists the location names and the link to the location.
 
     Returns a dictionary with a single key "locations" which
@@ -97,11 +126,51 @@ def api_list_locations(request):
         ]
     }
     """
-    return JsonResponse({})
-
-
-def api_show_location(request, id):
+    # result = []
+    # response = Location.objects.all()
+    # for location in response:
+    #     result.append(
+    #         {
+    #             "name": location.name,
+    #             "href": location.get_api_url(),
+    #         }
+    #     )
+    """GET Explanation - Get Locations
+    if request.method is a GET request:
+        create variable and set it equal to all the objects
+        return jsonresponse dictionary, where key is a string and variable is the value. Use encoder
     """
+    """POST Explanation - Create Location
+        We know that content is in the request.body
+        Attach content of post to a variable. Must use the json.loads method to convert json to python
+        Set return variable to the content variable by unpacking the content variable
+        Return like any other
+    """
+    if request.method == "GET":
+        locations = Location.objects.all()
+        return JsonResponse(
+            {"locations": locations}, encoder=LocationListEncoder
+        )
+    else:
+        content = json.loads(request.body)
+        # Get the state object and insert it into content since it's from a foreign key
+        try:
+            state = State.objects.get(abbreviation=content["state"])
+            content["state"] = state
+        except State.DoesNotExist:
+            return JsonResponse(
+                {"message": "Invalid state abbreviation"},
+                status=400,
+            )
+        location = Location.objects.create(**content)
+        return JsonResponse(
+            location, encoder=LocationDetailEncoder, safe=False
+        )
+
+
+@require_http_methods(["DELETE", "GET", "PUT"])
+def api_show_location(request, id):
+    """Description
     Returns the details for the Location model specified
     by the id parameter.
 
@@ -117,4 +186,31 @@ def api_show_location(request, id):
         "state": the two-letter abbreviation for the state,
     }
     """
-    return JsonResponse({})
+    # response = Location.objects.get(id=id)
+    # return JsonResponse(
+    #     {
+    #         "name": response.name,
+    #         "city": response.city,
+    #         "room_count": response.room_count,
+    #         "created": response.created,
+    #         "updated": response.updated,
+    #         "state": response.state.__str__(),
+    #     }
+    # )
+    """GET Explanation
+    Get specific instance of a location by matching id's
+    Set equal to a variable, return variable via JsonReponse with an encoder
+    """
+    """PUT Explanation
+    """
+    """DELETE Explanation
+    """
+    if request.method == "GET":
+        location = Location.objects.get(id=id)
+        return JsonResponse(
+            location, encoder=LocationDetailEncoder, safe=False
+        )
+    elif request.method == "DELETE":
+        location = Location.objects.get(id=id)
+        location.delete()
+        return JsonResponse({"deleted": "successful"})

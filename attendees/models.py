@@ -1,5 +1,7 @@
 from django.db import models
 from django.urls import reverse
+from events.models import Conference
+from django.core.exceptions import ObjectDoesNotExist
 
 
 class Attendee(models.Model):
@@ -14,7 +16,7 @@ class Attendee(models.Model):
     created = models.DateTimeField(auto_now_add=True)
 
     conference = models.ForeignKey(
-        "events.Conference",
+        Conference,
         related_name="attendees",
         on_delete=models.CASCADE,
     )
@@ -24,6 +26,16 @@ class Attendee(models.Model):
 
     def get_api_url(self):
         return reverse("api_show_attendee", kwargs={"id": self.id})
+
+    def create_badge(self):  # Always need to at least pass self. This method
+                              # doesn't require any more parameters
+        try:
+            self.badge
+        except ObjectDoesNotExist:
+            Badge.objects.create(attendee=self)
+            # create is a built in method. In parentheses, you set the
+            # attendee to self to link created instance to created badge)#
+            # must import object does not exist#
 
 
 class Badge(models.Model):
