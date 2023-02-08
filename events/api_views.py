@@ -50,6 +50,7 @@ class ConferenceListEncoder(ModelEncoder):
     ]
 
 
+@require_http_methods(["GET", "POST"])
 def api_list_conferences(request):
     """Description
     Lists the conference names and the link to the conference.
@@ -69,10 +70,22 @@ def api_list_conferences(request):
         ]
     }
     """
-    conferences = Conference.objects.all()
-    return JsonResponse(
-        {"conferences": conferences}, encoder=ConferenceListEncoder
-    )
+    if request.method == "GET":
+        conferences = Conference.objects.all()
+        return JsonResponse(
+            {"conferences": conferences}, encoder=ConferenceListEncoder
+        )
+    else:
+        content = json.loads(request.body)
+        try:
+            location = Location.objects.get(id=content["location"])
+            content["location"] = location
+        except Location.DoesNotExist:
+            return JsonResponse({"message": "Invalid location id"}, status=400)
+        conference = Conference.objects.create(**content)
+        return JsonResponse(
+            conference, encoder=ConferenceDetailEncoder, safe=False
+        )
 
 
 def api_show_conference(request, id):
@@ -202,8 +215,17 @@ def api_show_location(request, id):
     Set equal to a variable, return variable via JsonReponse with an encoder
     """
     """PUT Explanation
+    Retrieve request body from Insomnia, convert to Python and set to variable
+    State will need access to foreign key to get actual abbreviation
+    Create 2nd variable accessing state and look for abbreviation key that is equal to variable[state] which is what you write in the body
+    Set the variable[state] to that 2nd variable
+    Create except condition for if someone provides nonexistent abbreviation
+
+    Now update that instance of Location by pairing ID's. Set instance to variable and return it, like Show Location Detail function
     """
     """DELETE Explanation
+    After setting the Queryset equal to a variable, delete the variable
+    Return JsonResponse with any dictionary string that should be output when delete is successful
     """
     if request.method == "GET":
         location = Location.objects.get(id=id)
@@ -214,3 +236,19 @@ def api_show_location(request, id):
         location = Location.objects.get(id=id)
         location.delete()
         return JsonResponse({"deleted": "successful"})
+    else:
+        content = json.loads(request.body)
+        try:
+            if "state" in content:
+                abbrev = State.objects.get(abbreviation=content["state"])
+                content["state"] = abbrev
+        except State.DoesNotExist:
+            return JsonResponse(
+                {"message": "Invalid state abbreviation"},
+                status=400,
+            )
+        Location.objects.filter(id=id).update(**content)
+        location = Location.objects.get(id=id)
+        return JsonResponse(
+            location, encoder=LocationDetailEncoder, safe=False
+        )
