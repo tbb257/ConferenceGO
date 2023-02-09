@@ -28,6 +28,13 @@ class Presentation(models.Model):
     wants to give at the conference.
     """
 
+    @classmethod
+    def create(cls, **kwargs):
+        kwargs["status"] = Status.objects.get(name="SUBMITTED")
+        presentation = cls(**kwargs)
+        presentation.save()
+        return presentation
+
     presenter_name = models.CharField(max_length=150)
     company_name = models.CharField(max_length=150, null=True, blank=True)
     presenter_email = models.EmailField()

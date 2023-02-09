@@ -88,6 +88,7 @@ def api_list_conferences(request):
         )
 
 
+@require_http_methods(["GET", "PUT", "DELETE"])
 def api_show_conference(request, id):
     """Description
     Returns the details for the Conference model specified
@@ -113,10 +114,31 @@ def api_show_conference(request, id):
         }
     }
     """
-    conference = Conference.objects.get(id=id)
-    return JsonResponse(
-        conference, encoder=ConferenceDetailEncoder, safe=False
-    )
+    if request.method == "GET":
+        conference = Conference.objects.get(id=id)
+        return JsonResponse(
+            conference, encoder=ConferenceDetailEncoder, safe=False
+        )
+    elif request.method == "PUT":
+        content = json.loads(request.body)
+        try:
+            if "location" in content:
+                real_location = Location.objects.get(name=content["location"])
+                content["location"] = real_location
+        except Location.DoesNotExist:
+            return JsonResponse(
+                {"message": "Invalid location name"},
+                status=400,
+            )
+        Conference.objects.filter(id=id).update(**content)
+        conference = Conference.objects.get(id=id)
+        return JsonResponse(
+            conference, encoder=ConferenceDetailEncoder, safe=False
+        )
+    else:
+        conference = Conference.objects.get(id=id)
+        conference.delete()
+        return JsonResponse({"delete": "successful"})
 
 
 @require_http_methods(["GET", "POST"])
@@ -139,15 +161,6 @@ def api_list_locations(request):
         ]
     }
     """
-    # result = []
-    # response = Location.objects.all()
-    # for location in response:
-    #     result.append(
-    #         {
-    #             "name": location.name,
-    #             "href": location.get_api_url(),
-    #         }
-    #     )
     """GET Explanation - Get Locations
     if request.method is a GET request:
         create variable and set it equal to all the objects
@@ -199,17 +212,6 @@ def api_show_location(request, id):
         "state": the two-letter abbreviation for the state,
     }
     """
-    # response = Location.objects.get(id=id)
-    # return JsonResponse(
-    #     {
-    #         "name": response.name,
-    #         "city": response.city,
-    #         "room_count": response.room_count,
-    #         "created": response.created,
-    #         "updated": response.updated,
-    #         "state": response.state.__str__(),
-    #     }
-    # )
     """GET Explanation
     Get specific instance of a location by matching id's
     Set equal to a variable, return variable via JsonReponse with an encoder
@@ -235,7 +237,7 @@ def api_show_location(request, id):
     elif request.method == "DELETE":
         location = Location.objects.get(id=id)
         location.delete()
-        return JsonResponse({"deleted": "successful"})
+        return JsonResponse({"delete": "successful"})
     else:
         content = json.loads(request.body)
         try:

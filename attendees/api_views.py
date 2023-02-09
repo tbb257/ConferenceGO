@@ -4,6 +4,7 @@ from common.json import ModelEncoder
 from django.views.decorators.http import require_http_methods
 import json
 from events.models import Conference
+from events.api_views import ConferenceListEncoder
 
 
 class AttendeeListEncoder(ModelEncoder):
@@ -18,11 +19,12 @@ class AttendeeDetailEncoder(ModelEncoder):
     properties = [
         "email",
         "name",
+        "company_name",
         "created",
+        "conference",
     ]
 
-    def get_extra_data(self, o):
-        return {"conference": o.conference.name}
+    encoders = {"conference": ConferenceListEncoder()}
 
 
 @require_http_methods(["GET", "POST"])
@@ -51,7 +53,7 @@ def api_list_attendees(request, conference_id):
         return JsonResponse(
             {"attendees": attendees}, encoder=AttendeeListEncoder
         )
-    else:
+    elif request.method == "POST":
         content = json.loads(request.body)
         try:
             conference = Conference.objects.get(id=conference_id)
@@ -66,6 +68,7 @@ def api_list_attendees(request, conference_id):
         )
 
 
+@require_http_methods(["GET", "PUT", "DELETE"])
 def api_show_attendee(request, id):
     """
     Returns the details for the Attendee model specified
@@ -86,5 +89,26 @@ def api_show_attendee(request, id):
         }
     }
     """
-    attendee = Attendee.objects.get(id=id)
-    return JsonResponse(attendee, encoder=AttendeeDetailEncoder, safe=False)
+    if request.method == "GET":
+        attendee = Attendee.objects.get(id=id)
+        return JsonResponse(
+            attendee, encoder=AttendeeDetailEncoder, safe=False
+        )
+    elif request.method == "PUT":
+        content = json.loads(request.body)
+        try:
+            conference = Conference.objects.get(name=content["conference"])
+            content["conference"] = conference
+        except Conference.DoesNotExist:
+            return JsonResponse(
+                {"message": "Invalid conference id"}, status=400
+            )
+        Attendee.objects.filter(id=id).update(**content)
+        attendee = Attendee.objects.get(id=id)
+        return JsonResponse(
+            attendee, encoder=AttendeeDetailEncoder, safe=False
+        )
+    else:
+        attendee = Attendee.objects.get(id=id)
+        attendee.delete()
+        return JsonResponse({"delete": "successful"})
