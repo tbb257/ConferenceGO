@@ -119,7 +119,7 @@ def api_show_conference(request, id):
     if request.method == "GET":
         conference = Conference.objects.get(id=id)
 
-        weather = get_weather_data("New York City", "New York")
+        weather = get_weather_data(conference.location.city, conference.location.state)
         return JsonResponse(
             {"conference": conference, "weather": weather},
             encoder=ConferenceDetailEncoder,
