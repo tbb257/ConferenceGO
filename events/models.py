@@ -32,6 +32,7 @@ class Location(models.Model):
     room_count = models.PositiveSmallIntegerField()
     created = models.DateTimeField(auto_now_add=True)
     updated = models.DateTimeField(auto_now=True)
+    location_url= models.URLField(default="")
 
     state = models.ForeignKey(
         State,
