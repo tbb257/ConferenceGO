@@ -1,7 +1,12 @@
 from django.db import models
 from django.urls import reverse
-from events.models import Conference
+# from events.models import Conference
 from django.core.exceptions import ObjectDoesNotExist
+
+
+class ConferenceVO(models.Model):
+    import_href = models.CharField(max_length=200, unique=True)
+    name = models.CharField(max_length=200)
 
 
 class Attendee(models.Model):
@@ -16,7 +21,7 @@ class Attendee(models.Model):
     created = models.DateTimeField(auto_now_add=True)
 
     conference = models.ForeignKey(
-        Conference,
+        ConferenceVO,
         related_name="attendees",
         on_delete=models.CASCADE,
     )
@@ -28,7 +33,7 @@ class Attendee(models.Model):
         return reverse("api_show_attendee", kwargs={"id": self.id})
 
     def create_badge(self):  # Always need to at least pass self. This method
-                              # doesn't require any more parameters
+        # doesn't require any more parameters
         try:
             self.badge
         except ObjectDoesNotExist:
