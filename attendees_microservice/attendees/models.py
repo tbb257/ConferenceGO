@@ -1,5 +1,7 @@
 from django.db import models
 from django.urls import reverse
+from datetime import date
+
 # from events.models import Conference
 from django.core.exceptions import ObjectDoesNotExist
 
@@ -60,3 +62,11 @@ class Badge(models.Model):
         on_delete=models.CASCADE,
         primary_key=True,
     )
+
+
+class AccountVO(models.Model):
+    email = models.EmailField(unique=True)
+    first_name = models.CharField(max_length=50)
+    last_name = models.CharField(max_length=150)
+    is_active = models.BooleanField()
+    updated = models.DateTimeField(auto_now=True, )

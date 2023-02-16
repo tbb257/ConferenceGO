@@ -18,6 +18,9 @@ class PresentationDetailEncoder(ModelEncoder):
         "created",
     ]
 
+    def get_extra_data(self, o):
+        return {"status": o.status.name}
+
 
 class PresentationListEncoder(ModelEncoder):
     model = Presentation
@@ -27,6 +30,7 @@ class PresentationListEncoder(ModelEncoder):
 
     def get_extra_data(self, o):
         return {"status": o.status.name}
+
 
 @require_http_methods(["GET", "POST"])
 def api_list_presentations(request, conference_id):
@@ -62,14 +66,13 @@ def api_list_presentations(request, conference_id):
     if request.method == "GET":
         presentations = Presentation.objects.filter(conference=conference_id)
         return JsonResponse(
-            {"presentations": presentations},
-            encoder=PresentationListEncoder
+            {"presentations": presentations}, encoder=PresentationListEncoder
         )
     else:
         content = json.loads(request.body)
         try:
             conference = Conference.objects.get(id=conference_id)
-            content["conference"]=conference
+            content["conference"] = conference
         except Conference.DoesNotExist:
             return JsonResponse(
                 {"message": "Invalid conference id"},
@@ -111,7 +114,23 @@ def api_show_presentation(request, id):
     """
     presentation = Presentation.objects.get(id=id)
     return JsonResponse(
-        presentation,
-        encoder=PresentationDetailEncoder,
-        safe=False
+        presentation, encoder=PresentationDetailEncoder, safe=False
+    )
+
+
+@require_http_methods(["PUT"])
+def api_approve_presentation(request, id):
+    presentation = Presentation.objects.get(id=id)
+    presentation.approve()
+    return JsonResponse(
+        presentation, encoder=PresentationDetailEncoder, safe=False
+    )
+
+
+@require_http_methods(["PUT"])
+def api_reject_presentation(request, id):
+    presentation = Presentation.objects.get(id=id)
+    presentation.reject()
+    return JsonResponse(
+        presentation, encoder=PresentationDetailEncoder, safe=False
     )
